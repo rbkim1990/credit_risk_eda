@@ -231,10 +231,10 @@ ggplot(credit, aes(x=Credit.amount)) +
   geom_histogram(aes(fill=Sex), binwidth=bin_width, alpha=0.6, color="grey20", lwd=0.2) +
   stat_bin(binwidth=bin_width, geom="text", color="black", size=3.5, aes(label=..count.., group=Risk), position=position_stack(vjust=0.5)) +
   scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
-  scale_x_continuous(breaks=seq(0,max(credit$Credit.amount), bin_width)) + 
+  scale_x_continuous(breaks=seq(0,max(credit$Credit.amount), bin_width*2)) + 
   ggtitle("Distribution of Credit.amount by Sex")
 
-ggsave("../images/distrbition_of_credit_amount_by_sex.png")
+ggsave("../images/distribution_of_credit_amount_by_sex.png")
 ```
 
 ```{r, echo=FALSE, message=FALSE, results='hide'}
