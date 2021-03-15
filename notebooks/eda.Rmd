@@ -1,0 +1,219 @@
+---
+title: "German Credit Data EDA"
+output: html_notebook
+---
+Notebook for Elementary Data Analysis on the German Credit dataset.
+
+Dataset downloaded from the Kaggle at "https://www.kaggle.com/kabure/german-credit-data-with-risk"
+
+# Setup
+```{r}
+# Load libraries
+
+library(ggplot2)
+library(psych, warn.conflicts = FALSE)
+
+# Load data
+credit <- read.csv("../data/german_credit_data.csv", header=TRUE, sep=",")
+
+# Checking the first few rows of the dataset
+head(credit)
+```
+As seen above, there are nine explanatory variables and one response variable ("Risk"). Of the nine explanatory variables, 4 are int-based and five are chr-based.
+
+# First look into the data
+```{r}
+describe(credit)
+```
+Some statistics of the data:
+- The average age of the dataset is 35.55, with a minimum age of 19 and a maximum age of 75.
+- The Job variable, while the values are int-based, is actually a categorical variable.
+- The Credit.amount variable has a mean value of 3271 DM (Deutsche Mark), which is quite different from the median value of 2320. There is either a skew or numerous outliers to this feature.
+- The average Duration of credit is 20.9 months, with the maximum at 72 months and the minimum at 4 months.
+
+# Data Cleaning
+```{r}
+# Converting Housing into a Factor feature
+credit$Housing <- factor(credit$Housing, levels=c("own", "rent", "free"))
+
+# Converting NA values in Saving.accounts
+credit$Saving.accounts[is.na(credit$Saving.accounts)] <- "none"
+
+# Converting NA values in Checking.account
+credit$Checking.account[is.na(credit$Checking.account)] <- "none"
+
+# Converting Saving.accounts into a Factor feature
+credit$Saving.accounts <- factor(credit$Saving.accounts, levels=c("none", "little", "moderate", "quite rich", "rich"))
+
+# Converting Saving.accounts into a Factor feature
+credit$Checking.account <- factor(credit$Checking.account, levels=c("none", "little", "moderate", "rich"))
+
+```
+
+# Visualizations
+## Visualizing each of the features with respect to credit$Risk
+```{r}
+# Histogram of Age
+ggplot(credit, aes(x=Age, fill=Risk)) + 
+  geom_histogram(binwidth=5, alpha=0.6, position="identity") +
+  scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  ggtitle("Distribution of Age by Risk")
+```
+
+```{r}
+# Histogram of Credit.amount
+ggplot(credit, aes(x=Credit.amount, fill=Risk)) + 
+  geom_histogram(binwidth=1000, alpha=0.6, position="identity") +
+  scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  ggtitle("Distribution of Credit.amount by Risk")
+```
+
+```{r}
+# Histogram of Duration
+ggplot(credit, aes(x=Duration, fill=Risk)) + 
+  geom_histogram(binwidth=6, alpha=0.6, position="identity") +
+  scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  ggtitle("Distribution of Duration by Risk")
+```
+
+```{r}
+ggplot(credit, aes(x=Sex, fill=Risk)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel2") + 
+  ggtitle("Distribution of Sex by Risk") +
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+
+
+```{r}
+ggplot(credit, aes(x=Job, fill=Risk)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel2") + 
+  ggtitle("Distribution of Job by Risk") + 
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+
+
+```{r}
+# Barplot showing Housing values
+ggplot(credit, aes(x=Housing, fill=Risk)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel2") + 
+  ggtitle("Distribution of Housing by Risk") + 
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+
+```{r}
+# Barplot showing Savings.accounts values
+ggplot(credit, aes(x=Saving.accounts, fill=Risk)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel2") + 
+  ggtitle("Distribution of Saving.accounts by Risk") +
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+
+
+```{r}
+# Barplot showing Checking.account values
+ggplot(credit, aes(x=Checking.account, fill=Risk)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel2") + 
+  ggtitle("Distribution of Checking.account by Risk") +
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+
+```{r}
+# Barplot showing Purpose values
+par(mar = c(4,10,4,2) + 0.1)
+ggplot(credit, aes(x=Purpose, fill=Risk)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel2") + 
+  ggtitle("Distribution of Purpose by Risk") +
+  coord_flip() +
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+
+```
+
+
+## Visualizing each of the features with respect to credit$Sex
+```{r}
+# Histogram of Age
+ggplot(credit, aes(x=Age, fill=Sex)) + 
+  geom_histogram(binwidth=5, alpha=0.6, position="identity") +
+  scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  ggtitle("Distribution of Age by Sex")
+```
+
+```{r}
+# Histogram of Credit.amount
+ggplot(credit, aes(x=Credit.amount, fill=Sex)) + 
+  geom_histogram(binwidth=1000, alpha=0.6, position="identity") +
+  scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  ggtitle("Distribution of Credit.amount by Sex")
+```
+
+```{r}
+# Histogram of Duration
+ggplot(credit, aes(x=Duration, fill=Sex)) + 
+  geom_histogram(binwidth=6, alpha=0.6, position="identity") +
+  scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  ggtitle("Distribution of Duration by Sex")
+```
+
+```{r}
+ggplot(credit, aes(x=Risk, fill=Sex)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel1") + 
+  ggtitle("Distribution of Risk by Sex") +
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+
+
+```{r}
+ggplot(credit, aes(x=Job, fill=Sex)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel1") + 
+  ggtitle("Distribution of Job by Sex") + 
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+
+
+```{r}
+# Barplot showing Housing values
+ggplot(credit, aes(x=Housing, fill=Sex)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel1") + 
+  ggtitle("Distribution of Housing by Sex") + 
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+
+```{r}
+# Barplot showing Savings.accounts values
+ggplot(credit, aes(x=Saving.accounts, fill=Sex)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel1") + 
+  ggtitle("Distribution of Saving.accounts by Sex") +
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+
+
+```{r}
+# Barplot showing Checking.account values
+ggplot(credit, aes(x=Checking.account, fill=Sex)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel1") + 
+  ggtitle("Distribution of Checking.account by Sex") +
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+```{r}
+# Barplot showing Purpose values
+par(mar = c(4,10,4,2) + 0.1)
+ggplot(credit, aes(x=Purpose, fill=Sex)) + 
+  geom_bar(stat="count") + 
+  scale_fill_brewer(palette = "Pastel1") + 
+  ggtitle("Distribution of Purpose by Sex") +
+  coord_flip() +
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+
+```
+
