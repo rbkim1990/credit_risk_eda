@@ -1,5 +1,5 @@
 # Credit Risk EDA
-*Analysis by Roy Kim*
+*Analysis by Roy Kim*  
 The purpose of this project is to learn the basics of R through performing EDA on the German Credit dataset. To best view results, download the `eda.nb.html` notebook (at this [link](https://github.com/rbkim1990/credit_risk_eda/blob/main/notebooks/eda.nb.html)) and view in the browser of your choice.
 
 # Folder Structure
