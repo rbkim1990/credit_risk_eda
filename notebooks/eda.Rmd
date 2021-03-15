@@ -2,9 +2,11 @@
 title: "German Credit Data EDA"
 output: html_notebook
 ---
-Notebook for Elementary Data Analysis on the German Credit dataset.
+Notebook for Elementary Data Analysis on the German Credit dataset. This notebook will do statistical exploration, generate various visualizations, and make some suggestions if a model were to be created to predict the target variable, Risk.
 
-Dataset downloaded from the Kaggle at "https://www.kaggle.com/kabure/german-credit-data-with-risk"
+There are 11 columns (1 id column, 9 explanatory variables, 1 response variable) with 1000 observations (rows). Each observation is representative of a person who takes a credit by a bank and given a "good" or a "bad" credit risk assessment. The original dataset by Pro. Hofmann included 20 variables, but was in a complicated format. The dataset used in this analysis has been cleansed and the number of columns reduced.
+
+Dataset downloaded from the Kaggle  [here](https://www.kaggle.com/kabure/german-credit-data-with-risk).
 
 # Setup
 ```{r}
@@ -19,28 +21,45 @@ credit <- read.csv("../data/german_credit_data.csv", header=TRUE, sep=",")
 # Checking the first few rows of the dataset
 head(credit)
 ```
-As seen above, there are nine explanatory variables and one response variable ("Risk"). Of the nine explanatory variables, 4 are int-based and five are chr-based.
+Using `head()` to look at the first few rows of the German Credit dataset, we can see that there are nine explanatory variables and one response variable ("Risk"). Of the nine explanatory variables, 4 are int-based and five are chr-based. However, to proceed to the modeling stage, the categorical variables need to either be changed to a numerical scale or one-hot encoded. 
 
 # First look into the data
+Using `describe()` from the `psych` library, let's take a look at the summary statistics of the data.
 ```{r}
 describe(credit)
 ```
-Some statistics of the data:
-- The average age of the dataset is 35.55, with a minimum age of 19 and a maximum age of 75.
-- The Job variable, while the values are int-based, is actually a categorical variable.
-- The Credit.amount variable has a mean value of 3271 DM (Deutsche Mark), which is quite different from the median value of 2320. There is either a skew or numerous outliers to this feature.
-- The average Duration of credit is 20.9 months, with the maximum at 72 months and the minimum at 4 months.
+Noteworthy points:
+
+- `Sex` and `Risk` are binary variable columns. Taking a look at how each of the the classes in those variables impact the rest of the distributions will be a good place to start EDA.
+- The average `Age` of the dataset is 35.55, with a minimum age of 19 and a maximum age of 75.
+- The `Job` variable, while the values are int-based, is actually a categorical variable. The numerical values have the corresponding meanings:
+  - 0: unskilled and non-resident
+  - 1: unskilled and resident
+  - 2: skilled
+  - 3: highly skilled
+- The `Credit.amount` variable has a mean value of 3271 DM (Deutsche Mark), which is quite different from the median value of 2320. in fact, the skew statistic shows that there is right skew on `Credit.amount`, as well as the `Saving.accounts` variable.
+- The average `Duration` of credit is 20.9 months, with the maximum at 72 months and the minimum at 4 months.
 
 # Data Cleaning
+In order to create visualizations, some cleaning of the data is required. First, let's determine if there are any null values that we need to impute.
 ```{r}
-# Converting Housing into a Factor feature
-credit$Housing <- factor(credit$Housing, levels=c("own", "rent", "free"))
+# function to check for nulls
+lapply(credit,function(x) { length(which(is.na(x)))})
+```
+The `Saving.accounts` and `Checking.account` columns have a number of null values. We will interpret those NA values as not having a saving or a checking account. In the place of nulls, we'll insert "none".
 
+```{r}
 # Converting NA values in Saving.accounts
 credit$Saving.accounts[is.na(credit$Saving.accounts)] <- "none"
 
 # Converting NA values in Checking.account
 credit$Checking.account[is.na(credit$Checking.account)] <- "none"
+```
+
+Next, we will want some of the columns to be in a specific, logical order to make better sense of the visualizations to be created. We will convert some of the categorical columns into Factor columns that preserve a certain order.
+```{r}
+# Converting Housing into a Factor feature
+credit$Housing <- factor(credit$Housing, levels=c("own", "rent", "free"))
 
 # Converting Saving.accounts into a Factor feature
 credit$Saving.accounts <- factor(credit$Saving.accounts, levels=c("none", "little", "moderate", "quite rich", "rich"))
@@ -49,80 +68,130 @@ credit$Saving.accounts <- factor(credit$Saving.accounts, levels=c("none", "littl
 credit$Checking.account <- factor(credit$Checking.account, levels=c("none", "little", "moderate", "rich"))
 
 ```
+Data is ready to be visualized.
 
 # Visualizations
+Because our target variable is `Risk`, we will be looking at the various columns with respect to `Risk` in a "group by" fashion. These visualizations will also help us understand the distributions of each column. First, we'll start with the numerical columns.
 ## Visualizing each of the features with respect to credit$Risk
-```{r}
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
+ggplot(credit, aes(x=Risk)) + 
+  geom_bar(stat="count", fill="LIGHTBLUE") + 
+  ggtitle("Distribution of Risk") +
+  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+```
+In the dataset, we can see that 70% of the observations are listed as "good" in terms of credit risk, while 30% are listed as "bad". This baseline will help us as we compare the other distributions to the way that the `Risk` class is distributed.
+
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Histogram of Age
-ggplot(credit, aes(x=Age, fill=Risk)) + 
-  geom_histogram(binwidth=5, alpha=0.6, position="identity") +
+bin_width <- 5
+
+ggplot(credit, aes(x=Age)) + 
+  geom_histogram(aes(fill=Risk), binwidth=bin_width, alpha=0.6, color="grey20", lwd=0.2) +
+  stat_bin(binwidth=bin_width, geom="text", color="black", size=3.5, aes(label=..count.., group=Risk), position=position_stack(vjust=0.5)) +
   scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  scale_x_continuous(breaks=seq(0,max(credit$Age), bin_width)) + 
   ggtitle("Distribution of Age by Risk")
-```
 
-```{r}
+ggsave("../images/distribution_of_age_by_risk.png")
+```
+Looking at the `Age` distribution, we can see a couple of interesting insights. First, we see that generally the younger you are, the more likely you will be a "bad" credit risk. In the `Age` 25-30 bin, we see that the ratio is about `85/234` "bad" risks, or about 36%. Compare that to the overall `Risk` distribution of "bad" risks being at 30% "bad".
+
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Histogram of Credit.amount
-ggplot(credit, aes(x=Credit.amount, fill=Risk)) + 
-  geom_histogram(binwidth=1000, alpha=0.6, position="identity") +
+bin_width <- 1000
+
+ggplot(credit, aes(x=Credit.amount)) + 
+  geom_histogram(aes(fill=Risk), binwidth=bin_width, alpha=0.6, color="grey20", lwd=0.2) +
+  stat_bin(binwidth=bin_width, geom="text", color="black", size=3.5, aes(label=..count.., group=Risk), position=position_stack(vjust=0.5)) +
   scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  scale_x_continuous(breaks=seq(0,max(credit$Credit.amount), bin_width*2)) + 
   ggtitle("Distribution of Credit.amount by Risk")
-```
 
-```{r}
+ggsave("../images/distribution_of_credit_amount_by_risk.png")
+```
+The `Credit.amount` distribution shows that if the `Credit.amount` value is lower, then there is more likelihood of being a "good" credit risk. The first bin of 0-1000 shows about 83% of those observations are "good" credit risk. The following bins seem to decrease in that ratio, with the ending bins almost all "bad" credit risks. Therefore, the higher the amount of credit, the higher chance of being a "bad" credit risk.
+
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Histogram of Duration
-ggplot(credit, aes(x=Duration, fill=Risk)) + 
-  geom_histogram(binwidth=6, alpha=0.6, position="identity") +
-  scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
-  ggtitle("Distribution of Duration by Risk")
-```
+bin_width <- 6
 
-```{r}
+ggplot(credit, aes(x=Duration)) + 
+  geom_histogram(aes(fill=Risk), binwidth=bin_width, alpha=0.6, color="grey20", lwd=0.2) +
+  stat_bin(binwidth=bin_width, geom="text", color="black", size=3.5, aes(label=..count.., group=Risk), position=position_stack(vjust=0.5)) +
+  scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  scale_x_continuous(breaks=seq(0,max(credit$Duration), bin_width)) + 
+  ggtitle("Distribution of Duration by Risk")
+
+ggsave("../images/distribution_of_duration_by_risk.png")
+```
+The `Duration` column shows that the shorter the duration of credit, the higher chance of being a "good" credit risk. As the duration increases, the ratio of good to bad credit risk decreases, as well.
+
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
 ggplot(credit, aes(x=Sex, fill=Risk)) + 
   geom_bar(stat="count") + 
   scale_fill_brewer(palette = "Pastel2") + 
   ggtitle("Distribution of Sex by Risk") +
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+
+ggsave("../images/distribution_of_sex_by_risk.png")
 ```
+When looking at the distribution of `Sex`, we see that for females, about 65% are labeled as a "good" credit risk. This is lower than the 70% baseline number, meaning that there is some implicit bias in this data. For males, that ratio is at 72%, which is higher than the 70% baseline. Including this feature will add bias to a predictive model and should not be included in the list of features.
 
-
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 ggplot(credit, aes(x=Job, fill=Risk)) + 
   geom_bar(stat="count") + 
   scale_fill_brewer(palette = "Pastel2") + 
   ggtitle("Distribution of Job by Risk") + 
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+
+ggsave("../images/distribution_of_job_by_risk.png")
 ```
+Interestingly, it seems that the `Job` distribution has some mixed results. Observations with job class 0 or 3 are under the 70% "good" credit risk ratio, while the other two classes are above the 70% ratio. 
 
-
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Barplot showing Housing values
 ggplot(credit, aes(x=Housing, fill=Risk)) + 
   geom_bar(stat="count") + 
   scale_fill_brewer(palette = "Pastel2") + 
   ggtitle("Distribution of Housing by Risk") + 
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
-```
 
-```{r}
+ggsave("../images/distribution_of_housing_by_risk.png")
+```
+Those observations who are renting have a "good" credit risk ratio of 61%, well below the 70% baseline. Those who are "free" have an even lower ratio of 59%.
+
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Barplot showing Savings.accounts values
 ggplot(credit, aes(x=Saving.accounts, fill=Risk)) + 
   geom_bar(stat="count") + 
   scale_fill_brewer(palette = "Pastel2") + 
   ggtitle("Distribution of Saving.accounts by Risk") +
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+
+ggsave("../images/distribution_of_saving_accounts_by_risk.png")
 ```
+Interesting, values of "none" for `Saving.accounts` has a "good" risk ratio of 83%. Those that have "little" in the savings accounts had a ratio of 64%, which is below the 70% ratio. Those that had "moderate" amount of savings had a ratio of 67%.
 
-
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Barplot showing Checking.account values
 ggplot(credit, aes(x=Checking.account, fill=Risk)) + 
   geom_bar(stat="count") + 
   scale_fill_brewer(palette = "Pastel2") + 
   ggtitle("Distribution of Checking.account by Risk") +
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
-```
 
-```{r}
+ggsave("../images/distribution_of_checking_account_by_risk.png")
+```
+Values of "none" have a ratio of 88%. Interestingly, the values of "little" have a ratio of 51% and the values of "moderate" have a ratio of 61%. This feature will possibly be instrumental in predicting `Risk`.
+
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Barplot showing Purpose values
 par(mar = c(4,10,4,2) + 0.1)
 ggplot(credit, aes(x=Purpose, fill=Risk)) + 
@@ -132,80 +201,103 @@ ggplot(credit, aes(x=Purpose, fill=Risk)) +
   coord_flip() +
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
 
+ggsave("../images/distribution_of_purpose_by_risk.png")
 ```
+In the `Purpose` distribution, most of the classes are under the 70% "good" credit risk ratio, though nothing seems to be great significance. 
+
 
 
 ## Visualizing each of the features with respect to credit$Sex
-```{r}
+These next visualizations show the distributions of the features as grouped by `Sex`. However, as `Risk` is the target variable, these visualizations are more for reference and not as a critical analysis into next steps.
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Histogram of Age
-ggplot(credit, aes(x=Age, fill=Sex)) + 
-  geom_histogram(binwidth=5, alpha=0.6, position="identity") +
+bin_width <- 5
+
+ggplot(credit, aes(x=Age)) + 
+  geom_histogram(aes(fill=Sex), binwidth=bin_width, alpha=0.6, color="grey20", lwd=0.2) +
+  stat_bin(binwidth=bin_width, geom="text", color="black", size=3.5, aes(label=..count.., group=Risk), position=position_stack(vjust=0.5)) +
   scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  scale_x_continuous(breaks=seq(0,max(credit$Age), bin_width)) + 
   ggtitle("Distribution of Age by Sex")
+
+ggsave("../images/distribution_of_age_by_sex.png")
 ```
 
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Histogram of Credit.amount
-ggplot(credit, aes(x=Credit.amount, fill=Sex)) + 
-  geom_histogram(binwidth=1000, alpha=0.6, position="identity") +
+bin_width <- 1000
+
+ggplot(credit, aes(x=Credit.amount)) + 
+  geom_histogram(aes(fill=Sex), binwidth=bin_width, alpha=0.6, color="grey20", lwd=0.2) +
+  stat_bin(binwidth=bin_width, geom="text", color="black", size=3.5, aes(label=..count.., group=Risk), position=position_stack(vjust=0.5)) +
   scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  scale_x_continuous(breaks=seq(0,max(credit$Credit.amount), bin_width)) + 
   ggtitle("Distribution of Credit.amount by Sex")
+
+ggsave("../images/distrbition_of_credit_amount_by_sex.png")
 ```
 
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Histogram of Duration
-ggplot(credit, aes(x=Duration, fill=Sex)) + 
-  geom_histogram(binwidth=6, alpha=0.6, position="identity") +
+bin_width <- 6
+
+ggplot(credit, aes(x=Duration)) + 
+  geom_histogram(aes(fill=Sex), binwidth=bin_width, alpha=0.6, color="grey20", lwd=0.2) +
+  stat_bin(binwidth=bin_width, geom="text", color="black", size=3.5, aes(label=..count.., group=Risk), position=position_stack(vjust=0.5)) +
   scale_fill_manual(values=c("RED", "LIGHTBLUE")) +
+  scale_x_continuous(breaks=seq(0,max(credit$Duration), bin_width)) + 
   ggtitle("Distribution of Duration by Sex")
-```
 
-```{r}
-ggplot(credit, aes(x=Risk, fill=Sex)) + 
-  geom_bar(stat="count") + 
-  scale_fill_brewer(palette = "Pastel1") + 
-  ggtitle("Distribution of Risk by Sex") +
-  stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+ggsave("../images/distribution_of_duration_by_sex.png")
 ```
 
 
-```{r}
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
 ggplot(credit, aes(x=Job, fill=Sex)) + 
   geom_bar(stat="count") + 
   scale_fill_brewer(palette = "Pastel1") + 
   ggtitle("Distribution of Job by Sex") + 
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+
+ggsave("../images/distribution_of_job_by_sex.png")
 ```
 
 
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Barplot showing Housing values
 ggplot(credit, aes(x=Housing, fill=Sex)) + 
   geom_bar(stat="count") + 
   scale_fill_brewer(palette = "Pastel1") + 
   ggtitle("Distribution of Housing by Sex") + 
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+
+ggsave("../images/distribution_of_housing_by_sex.png")
 ```
 
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Barplot showing Savings.accounts values
 ggplot(credit, aes(x=Saving.accounts, fill=Sex)) + 
   geom_bar(stat="count") + 
   scale_fill_brewer(palette = "Pastel1") + 
   ggtitle("Distribution of Saving.accounts by Sex") +
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+ggsave("../images/distribution_of_saving_accounts_by_sex.png")
 ```
 
 
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Barplot showing Checking.account values
 ggplot(credit, aes(x=Checking.account, fill=Sex)) + 
   geom_bar(stat="count") + 
   scale_fill_brewer(palette = "Pastel1") + 
   ggtitle("Distribution of Checking.account by Sex") +
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
+
+ggsave("../images/distribution_of_checking_account_by_sex.png")
 ```
-```{r}
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # Barplot showing Purpose values
 par(mar = c(4,10,4,2) + 0.1)
 ggplot(credit, aes(x=Purpose, fill=Sex)) + 
@@ -215,5 +307,12 @@ ggplot(credit, aes(x=Purpose, fill=Sex)) +
   coord_flip() +
   stat_count(geom = "text", colour = "black", size = 3.5, aes(label = ..count..),position=position_stack(vjust=0.5))
 
+ggsave("../images/distribution_of_purpose_by_sex.png")
+
 ```
 
+# Next Steps
+As a result of the EDA, we can see that most of the features have predictive ability in predicting the target variable, `Risk`. However, a few suggestions going forward:
+
+1. Including `Sex` in any model will introduce some bias. It is strongly suggested to leave `Sex` out of the features to include in modeling.
+2. Doing a correlation analysis would be a crucial next step before modeling to see which features have strong predictive abbility. This is to be included in a later notebook.
